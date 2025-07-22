@@ -1,6 +1,7 @@
-from pathlib import Path
 import re
-from typing import Sequence
+from pathlib import Path, UnsupportedOperation
+from collections import defaultdict
+from typing import Generator, Sequence
 
 
 def rename_files(path: str | Path, replacement: str, pattern: str, escaped=True):
@@ -26,6 +27,22 @@ def rename_files(path: str | Path, replacement: str, pattern: str, escaped=True)
         new_name = f"{fname}{posix_path.suffix}"
         dest = posix_path.with_name(new_name)
         posix_path.rename(dest)
+
+
+def organize_file_by_prefix(dir_path: str | Path):
+    posix_path = Path(dir_path)
+    if posix_path.is_file():
+        raise UnsupportedOperation("cannot classify single file")
+    if not posix_path.exists():
+        raise FileNotFoundError(f"{posix_path} not found")
+
+    groups = classify_group_and_file([f for f in posix_path.iterdir()])
+    for folder in groups.keys():
+        Path(folder).mkdir(exist_ok=True)
+        for file in groups[folder]:
+            file.rename(
+                folder / match_and_replace(file.name, "[^0-9A-Za-z._-]+", "", False)
+            )
 
 
 def match_and_replace(string: str, pattern: str, replacement: str, to_escape):
@@ -72,6 +89,23 @@ def get_common_prefix(filenames: Sequence[str], attempt_better: bool = False) ->
         return ""
 
 
+def classify_group_and_file(paths: Sequence[Path] | Generator[Path]):
+    groups = defaultdict(list)  # type: defaultdict[Path, list[Path]]
+    for path in paths:
+        if path.is_dir():
+            continue
+        name = path.stem
+        parent = path.parent
+        matched_str = re.match(r"\d*[0-9a-zA-Z]+\d*", name)
+        if matched_str:
+            group = matched_str.group()
+            groups[parent / group].append(path)
+    return groups
+
+
 if __name__ == "__main__":
-    x = match_and_replace("/abc/dev/apple.png", "", "sdf", True)
-    print(x)
+    import os
+
+    x = "/home/rudy/Downloads/firefox/FreeDinoSprite/png"
+    y = organize_file_by_prefix(x)
+    print(y)
