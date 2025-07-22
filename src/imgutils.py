@@ -13,5 +13,11 @@ def trim_transparent_pixel(img: str):
         )
 
     image = Image.open(img).convert("RGBA")
-    cropped_image = image.getchannel("A").crop(image.getbbox())
+    cropped_image = image.crop(image.getbbox())
     return cropped_image
+
+
+if __name__ == "__main__":
+    path = "/home/rudy/Downloads/firefox/FreeDinoSprite/png/Dead (6).png"
+    x = trim_transparent_pixel(path)
+    x.show()
